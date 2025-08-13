@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P 异性距离匹配聊天</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #setup, #chat {
+            text-align: center;
+        }
+        input, select, button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #0084ff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #006acc;
+        }
+        #chat {
+            display: none;
+        }
+        #messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            text-align: left;
+            background-color: #fafafa;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .sent {
+            background-color: #0084ff;
+            color: white;
+            margin-left: 20%;
+        }
+        .received {
+            background-color: #e4e6eb;
+            color: black;
+            margin-right: 20%;
+        }
+        .info {
+            font-size: 0.9em;
+            color: #65676b;
+        }
+        #status {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .user-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .user-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .user-item:hover {
+            background-color: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>P2P 异性距离匹配聊天</h1>
+        <div id="setup">
+            <input type="text" id="username" placeholder="请输入您的昵称">
+            <br>
+            <select id="userGender">
+                <option value="">请选择您的性别</option>
+                <option value="male">男</option>
+                <option value="female">女</option>
+            </select>
+            <br>
+            <input type="number" id="maxDistance" placeholder="最大匹配距离 (公里)" value="100">
+            <br>
+            <!-- 模拟获取位置 -->
+            <p><em>注意：为演示目的，位置将被模拟。在真实环境中，会请求您的地理位置。</em></p>
+            <button onclick="startChat()">开始聊天</button>
+        </div>
+        <div id="chat">
+            <div>
+                <span>欢迎您, <strong id="displayUsername"></strong> (<span id="displayGender"></span>)</span>
+                <button onclick="disconnect()" style="float: right;">断开连接</button>
+            </div>
+            <div id="status">正在连接...</div>
+            <div id="messages"></div>
+            <div style="margin-top: 10px;">
+                <input type="text" id="messageInput" placeholder="输入消息..." onkeypress="if(event.key==='Enter')sendMessage()">
+                <button onclick="sendMessage()">发送</button>
+            </div>
+            <div class="user-list">
+                <h3>附近匹配的异性用户 (模拟):</h3>
+                <div id="nearbyUsers"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟用户数据和WebSocket连接
+        const SIMULATED_USERS = [
+            { id: 'user2', name: 'Alice', lat: 39.9042, lng: 116.4074, gender: 'female' }, // 北京
+            { id: 'user3', name: 'Bob', lat: 31.2304, lng: 121.4737, gender: 'male' },   // 上海
+            { id: 'user4', name: 'Charlie', lat: 23.1291, lng: 113.2644, gender: 'male' }, // 广州
+            { id: 'user5', name: 'Diana', lat: 39.8981, lng: 116.4138, gender: 'female' },  // 北京附近
+            { id: 'user6', name: 'Eve', lat: 39.9100, lng: 116.4000, gender: 'female' }, // 北京王府井
+        ];
+
+        let currentUser = null;
+        let ws = null;
+        let connectedUsers = {}; // 模拟已连接的用户
+
+        // 模拟获取当前用户位置
+        function getCurrentLocation() {
+            // 在真实应用中，这里会使用 navigator.geolocation.getCurrentPosition()
+            // 为了演示，我们模拟一个位置
+            const locations = [
+                { lat: 39.9042, lng: 116.4074 }, // 北京天安门
+                { lat: 39.9100, lng: 116.4000 }, // 北京王府井
+                { lat: 31.2304, lng: 121.4737 }, // 上海
+                { lat: 23.1291, lng: 113.2644 }, // 广州
+                { lat: 39.8900, lng: 116.4200 }, // 北京西站附近
+            ];
+            return locations[Math.floor(Math.random() * locations.length)];
+        }
+
+        // 计算两个经纬度点之间的距离 (Haversine formula)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // 地球半径 (公里)
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const d = R * c;
+            return d;
+        }
+
+        // 开始聊天流程
+        function startChat() {
+            const username = document.getElementById('username').value.trim();
+            const userGender = document.getElementById('userGender').value;
+            const maxDistance = parseFloat(document.getElementById('maxDistance').value);
+
+            if (!username) {
+                alert('请输入昵称');
+                return;
+            }
+            if (!userGender) {
+                alert('请选择您的性别');
+                return;
+            }
+            if (isNaN(maxDistance) || maxDistance <= 0) {
+                alert('请输入有效的最大距离');
+                return;
+            }
+
+            const location = getCurrentLocation();
+            currentUser = {
+                id: 'user' + Math.floor(Math.random() * 10000), // 模拟用户ID
+                name: username,
+                gender: userGender,
+                lat: location.lat,
+                lng: location.lng,
+                maxDist: maxDistance
+            };
+
+            document.getElementById('displayUsername').textContent = username;
+            document.getElementById('displayGender').textContent = userGender === 'male' ? '男' : '女';
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('chat').style.display = 'block';
+
+            connectToServer();
+        }
+
+        // 模拟连接到服务器/建立P2P连接
+        function connectToServer() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = '正在连接...';
+
+            // 模拟连接延迟
+            setTimeout(() => {
+                // 模拟WebSocket连接成功
+                ws = {
+                    send: function(data) {
+                        console.log("发送消息 (模拟):", data);
+                        // 模拟服务器广播消息
+                        setTimeout(() => {
+                            receiveMessage(JSON.parse(data));
+                        }, 100 + Math.random() * 500); // 模拟网络延迟
+                    },
+                    close: function() {
+                        console.log("连接已关闭 (模拟)");
+                        statusDiv.textContent = '连接已断开';
+                    }
+                };
+
+                statusDiv.textContent = '已连接';
+                updateNearbyUsers();
+                // 发送加入消息
+                ws.send(JSON.stringify({
+                    type: 'join',
+                    user: currentUser
+                }));
+            }, 1500);
+        }
+
+        // 更新附近匹配的异性用户列表
+        function updateNearbyUsers() {
+            const nearbyUsersDiv = document.getElementById('nearbyUsers');
+            nearbyUsersDiv.innerHTML = '';
+
+            SIMULATED_USERS.forEach(u => {
+                const dist = calculateDistance(currentUser.lat, currentUser.lng, u.lat, u.lng);
+                // 匹配条件：在距离内 且 性别不同
+                if (dist <= currentUser.maxDist && u.gender !== currentUser.gender && u.id !== currentUser.id) {
+                    const userItem = document.createElement('div');
+                    userItem.className = 'user-item';
+                    userItem.textContent = `${u.name} (${u.gender === 'male' ? '男' : '女'}, 约 ${dist.toFixed(2)} 公里)`;
+                    // 模拟点击发起聊天
+                    userItem.onclick = () => {
+                         addMessage(`系统: 您向 ${u.name} 发起了聊天请求 (模拟)`, 'info');
+                    };
+                    nearbyUsersDiv.appendChild(userItem);
+                }
+            });
+        }
+
+        // 断开连接
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            document.getElementById('chat').style.display = 'none';
+            document.getElementById('setup').style.display = 'block';
+            document.getElementById('messages').innerHTML = '';
+            connectedUsers = {};
+        }
+
+        // 发送消息
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message || !ws) return;
+
+            const msgData = {
+                type: 'message',
+                from: currentUser,
+                content: message,
+                timestamp: new Date().toISOString()
+            };
+
+            ws.send(JSON.stringify(msgData));
+            addMessage(message, 'sent');
+            input.value = '';
+        }
+
+        // 接收消息 (模拟)
+        function receiveMessage(data) {
+            if (data.type === 'message') {
+                // 检查是否在匹配范围内且性别不同
+                const dist = calculateDistance(currentUser.lat, currentUser.lng, data.from.lat, data.from.lng);
+                if (dist <= currentUser.maxDist && data.from.gender !== currentUser.gender) {
+                    addMessage(data.content, 'received', data.from.name);
+                }
+            } else if (data.type === 'join') {
+                 addMessage(`系统: ${data.user.name} 已上线`, 'info');
+            }
+        }
+
+        // 在页面上显示消息
+        function addMessage(content, type, senderName = null) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${type}`;
+
+            if (type === 'received' && senderName) {
+                messageElement.innerHTML = `<strong>${senderName}:</strong> ${content}`;
+            } else {
+                messageElement.textContent = content;
+            }
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // 页面加载完成后，可以尝试自动填充昵称
+        window.onload = function() {
+            const randomNames = ['旅行者', '探索者', '路人甲', '网友乙'];
+            document.getElementById('username').value = randomNames[Math.floor(Math.random() * randomNames.length)];
+        };
+    </script>
+</body>
+</html>
