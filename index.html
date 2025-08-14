@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>蛙蛙对聊</title>
+    <title>P2P 异性距离匹配聊天 (真实环境)</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -87,11 +87,15 @@
         .user-item:hover {
             background-color: #e9ecef;
         }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>蛙蛙对聊<h1>
+        <h1>P2P 异性距离匹配聊天 (真实环境)</h1>
         <div id="setup">
             <input type="text" id="username" placeholder="请输入您的昵称">
             <br>
@@ -103,56 +107,38 @@
             <br>
             <input type="number" id="maxDistance" placeholder="最大匹配距离 (公里)" value="100">
             <br>
-            <!-- 模拟获取位置 -->
-          <!--<p><em>注意：为演示目的，位置将被模拟。在真实环境中，会请求您的地理位置。</em></p>-->
             <button onclick="startChat()">开始聊天</button>
+            <p><em>点击开始后，浏览器可能会请求获取您的地理位置。</em></p>
         </div>
         <div id="chat">
             <div>
                 <span>欢迎您, <strong id="displayUsername"></strong> (<span id="displayGender"></span>)</span>
                 <button onclick="disconnect()" style="float: right;">断开连接</button>
             </div>
-            <div id="status">正在连接...</div>
+            <div id="status">正在初始化...</div>
             <div id="messages"></div>
             <div style="margin-top: 10px;">
                 <input type="text" id="messageInput" placeholder="输入消息..." onkeypress="if(event.key==='Enter')sendMessage()">
                 <button onclick="sendMessage()">发送</button>
             </div>
             <div class="user-list">
-                <h3>附近匹配的异性用户 (模拟):</h3>
-                <div id="nearbyUsers"></div>
+                <h3>附近匹配的异性用户:</h3>
+                <div id="nearbyUsers">正在获取位置并匹配...</div>
             </div>
         </div>
     </div>
 
     <script>
-        // 模拟用户数据和WebSocket连接
-        const SIMULATED_USERS = [
-            { id: 'user2', name: 'Alice', lat: 39.9042, lng: 116.4074, gender: 'female' }, // 北京
-            { id: 'user3', name: 'Bob', lat: 31.2304, lng: 121.4737, gender: 'male' },   // 上海
-            { id: 'user4', name: 'Charlie', lat: 23.1291, lng: 113.2644, gender: 'male' }, // 广州
-            { id: 'user5', name: 'Diana', lat: 39.8981, lng: 116.4138, gender: 'female' },  // 北京附近
-            { id: 'user6', name: 'Eve', lat: 39.9100, lng: 116.4000, gender: 'female' }, // 北京王府井
-        ];
+        // --- 配置 ---
+        // 请在此处替换为您的真实 WebSocket 服务器地址
+        const WEBSOCKET_SERVER_URL = 'wss://your-websocket-server.com'; // 示例: 'wss://echo.websocket.org' 用于测试，但无匹配逻辑
 
+        // --- 状态和数据 ---
         let currentUser = null;
         let ws = null;
-        let connectedUsers = {}; // 模拟已连接的用户
+        let connectedUsers = {}; // 存储已知的其他用户信息
 
-        // 模拟获取当前用户位置
-        function getCurrentLocation() {
-            // 在真实应用中，这里会使用 navigator.geolocation.getCurrentPosition()
-            // 为了演示，我们模拟一个位置
-            const locations = [
-                { lat: 39.9042, lng: 116.4074 }, // 北京天安门
-                { lat: 39.9100, lng: 116.4000 }, // 北京王府井
-                { lat: 31.2304, lng: 121.4737 }, // 上海
-                { lat: 23.1291, lng: 113.2644 }, // 广州
-                { lat: 39.8900, lng: 116.4200 }, // 北京西站附近
-            ];
-            return locations[Math.floor(Math.random() * locations.length)];
-        }
-
+        // --- 工具函数 ---
         // 计算两个经纬度点之间的距离 (Haversine formula)
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371; // 地球半径 (公里)
@@ -167,7 +153,9 @@
             return d;
         }
 
-        // 开始聊天流程
+        // --- 核心逻辑 ---
+
+        // 1. 开始聊天流程 - 获取用户输入和位置
         function startChat() {
             const username = document.getElementById('username').value.trim();
             const userGender = document.getElementById('userGender').value;
@@ -186,98 +174,206 @@
                 return;
             }
 
-            const location = getCurrentLocation();
-            currentUser = {
-                id: 'user' + Math.floor(Math.random() * 10000), // 模拟用户ID
-                name: username,
-                gender: userGender,
-                lat: location.lat,
-                lng: location.lng,
-                maxDist: maxDistance
-            };
+            document.getElementById('status').textContent = '正在获取您的位置...';
+            // 请求用户真实地理位置
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    // 成功回调
+                    function(position) {
+                        const location = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        currentUser = {
+                            id: 'user' + Math.floor(Math.random() * 1000000), // 简单ID，生产环境应由服务器分配
+                            name: username,
+                            gender: userGender,
+                            lat: location.lat,
+                            lng: location.lng,
+                            maxDist: maxDistance
+                        };
 
-            document.getElementById('displayUsername').textContent = username;
-            document.getElementById('displayGender').textContent = userGender === 'male' ? '男' : '女';
-            document.getElementById('setup').style.display = 'none';
-            document.getElementById('chat').style.display = 'block';
+                        document.getElementById('displayUsername').textContent = username;
+                        document.getElementById('displayGender').textContent = userGender === 'male' ? '男' : '女';
+                        document.getElementById('setup').style.display = 'none';
+                        document.getElementById('chat').style.display = 'block';
 
-            connectToServer();
+                        connectToServer();
+                    },
+                    // 错误回调
+                    function(error) {
+                        console.error('获取位置失败:', error);
+                        let msg = '无法获取您的位置。';
+                        if (error.code === error.PERMISSION_DENIED) {
+                            msg += ' 您拒绝了位置请求。请在浏览器设置中允许此网站获取位置信息。';
+                        } else if (error.code === error.POSITION_UNAVAILABLE) {
+                            msg += ' 位置信息不可用。';
+                        } else if (error.code === error.TIMEOUT) {
+                            msg += ' 获取位置超时。';
+                        }
+                        document.getElementById('status').innerHTML = `<span class="error">${msg}</span>`;
+                        // 可以选择让用户手动输入位置或重试
+                    }
+                );
+            } else {
+                document.getElementById('status').innerHTML = '<span class="error">您的浏览器不支持地理定位。</span>';
+            }
         }
 
-        // 模拟连接到服务器/建立P2P连接
+        // 2. 连接到 WebSocket 服务器
         function connectToServer() {
             const statusDiv = document.getElementById('status');
-            statusDiv.textContent = '正在连接...';
+            statusDiv.textContent = '正在连接服务器...';
 
-            // 模拟连接延迟
-            setTimeout(() => {
-                // 模拟WebSocket连接成功
-                ws = {
-                    send: function(data) {
-                        console.log("发送消息 (模拟):", data);
-                        // 模拟服务器广播消息
-                        setTimeout(() => {
-                            receiveMessage(JSON.parse(data));
-                        }, 100 + Math.random() * 500); // 模拟网络延迟
-                    },
-                    close: function() {
-                        console.log("连接已关闭 (模拟)");
-                        statusDiv.textContent = '连接已断开';
+            try {
+                ws = new WebSocket(WEBSOCKET_SERVER_URL);
+
+                ws.onopen = function(event) {
+                    console.log("WebSocket 连接已建立");
+                    statusDiv.textContent = '已连接到服务器';
+                    // 发送加入消息
+                    const joinMsg = {
+                        type: 'join',
+                        user: currentUser
+                    };
+                    ws.send(JSON.stringify(joinMsg));
+                };
+
+                ws.onmessage = function(event) {
+                    console.log("收到消息:", event.data);
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleMessageFromServer(data);
+                    } catch (e) {
+                        console.error("解析服务器消息失败:", e, event.data);
+                         addMessage(`系统: 收到无法解析的消息`, 'info');
                     }
                 };
 
-                statusDiv.textContent = '已连接';
-                updateNearbyUsers();
-                // 发送加入消息
-                ws.send(JSON.stringify({
-                    type: 'join',
-                    user: currentUser
-                }));
-            }, 1500);
+                ws.onclose = function(event) {
+                    console.log("WebSocket 连接已关闭", event);
+                    statusDiv.textContent = '与服务器的连接已断开';
+                     addMessage(`系统: 与服务器的连接已断开`, 'info');
+                };
+
+                ws.onerror = function(error) {
+                    console.error("WebSocket 错误:", error);
+                    statusDiv.innerHTML = '<span class="error">WebSocket 连接错误</span>';
+                     addMessage(`系统: 连接遇到错误`, 'info');
+                };
+
+            } catch (e) {
+                console.error("建立 WebSocket 连接时出错:", e);
+                statusDiv.innerHTML = '<span class="error">无法连接到服务器</span>';
+            }
         }
 
-        // 更新附近匹配的异性用户列表
+        // 3. 处理从服务器收到的消息
+        function handleMessageFromServer(data) {
+            switch (data.type) {
+                case 'userList':
+                    // 服务器发送了当前在线用户列表
+                    connectedUsers = {};
+                    data.users.forEach(u => {
+                        if (u.id !== currentUser.id) { // 不包括自己
+                            connectedUsers[u.id] = u;
+                        }
+                    });
+                    updateNearbyUsers();
+                    break;
+                case 'userJoined':
+                    // 新用户加入
+                    if (data.user.id !== currentUser.id) {
+                        connectedUsers[data.user.id] = data.user;
+                        updateNearbyUsers();
+                         addMessage(`系统: ${data.user.name} 已上线`, 'info');
+                    }
+                    break;
+                case 'userLeft':
+                    // 用户离开
+                    if (connectedUsers[data.userId]) {
+                        const leftUser = connectedUsers[data.userId];
+                         addMessage(`系统: ${leftUser.name} 已下线`, 'info');
+                        delete connectedUsers[data.userId];
+                        updateNearbyUsers();
+                    }
+                    break;
+                case 'message':
+                    // 收到聊天消息
+                    const sender = connectedUsers[data.fromId];
+                    if (sender) {
+                        const dist = calculateDistance(currentUser.lat, currentUser.lng, sender.lat, sender.lng);
+                        // 检查是否在匹配范围内且性别不同
+                        if (dist <= currentUser.maxDist && sender.gender !== currentUser.gender) {
+                            addMessage(data.content, 'received', sender.name);
+                        }
+                    } else {
+                        // 可能是来自尚未在列表中的用户，或者服务器转发的系统消息
+                        // 为简化，我们假设服务器只转发匹配用户的消息
+                        console.warn("收到未知用户的消息:", data.fromId);
+                    }
+                    break;
+                default:
+                    console.log("未知消息类型:", data.type);
+            }
+        }
+
+
+        // 4. 更新附近匹配的异性用户列表 (基于服务器提供的用户列表)
         function updateNearbyUsers() {
             const nearbyUsersDiv = document.getElementById('nearbyUsers');
             nearbyUsersDiv.innerHTML = '';
 
-            SIMULATED_USERS.forEach(u => {
+            let hasMatches = false;
+            for (const userId in connectedUsers) {
+                const u = connectedUsers[userId];
                 const dist = calculateDistance(currentUser.lat, currentUser.lng, u.lat, u.lng);
                 // 匹配条件：在距离内 且 性别不同
-                if (dist <= currentUser.maxDist && u.gender !== currentUser.gender && u.id !== currentUser.id) {
+                if (dist <= currentUser.maxDist && u.gender !== currentUser.gender) {
+                    hasMatches = true;
                     const userItem = document.createElement('div');
                     userItem.className = 'user-item';
-                    userItem.textContent = `${u.name} (${u.gender === 'male' ? '男' : '女'}, 约 ${dist.toFixed(2)} 公里)`;
-                    // 模拟点击发起聊天
-                    userItem.onclick = () => {
-                         addMessage(`系统: 您向 ${u.name} 发起了聊天请求 (模拟)`, 'info');
-                    };
+                    userItem.textContent = `${u.name} (${u.gender === 'male' ? '♂' : '♀'}, 约 ${dist.toFixed(2)} 公里)`;
+                    // 在真实 P2P 中，这里会发起连接请求
+                    // 目前通过服务器转发消息，所以直接显示即可
                     nearbyUsersDiv.appendChild(userItem);
                 }
-            });
+            }
+            if (!hasMatches) {
+                nearbyUsersDiv.textContent = '当前没有匹配的用户。';
+            }
         }
 
-        // 断开连接
+        // 5. 断开连接
         function disconnect() {
             if (ws) {
-                ws.close();
+                ws.close(); // 这会触发 onclose 事件
                 ws = null;
             }
+            // UI 重置
             document.getElementById('chat').style.display = 'none';
             document.getElementById('setup').style.display = 'block';
             document.getElementById('messages').innerHTML = '';
+            document.getElementById('nearbyUsers').innerHTML = '正在获取位置并匹配...';
             connectedUsers = {};
         }
 
-        // 发送消息
+        // 6. 发送消息
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
-            if (!message || !ws) return;
+            if (!message || !ws || ws.readyState !== WebSocket.OPEN) {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                     addMessage(`系统: 请先连接到服务器`, 'info');
+                }
+                return;
+            }
 
+            // 注意：在真实 P2P 中，这里会直接发送给目标用户
+            // 通过服务器中转，我们发送给服务器，由服务器转发
             const msgData = {
                 type: 'message',
-                from: currentUser,
                 content: message,
                 timestamp: new Date().toISOString()
             };
@@ -287,20 +383,7 @@
             input.value = '';
         }
 
-        // 接收消息 (模拟)
-        function receiveMessage(data) {
-            if (data.type === 'message') {
-                // 检查是否在匹配范围内且性别不同
-                const dist = calculateDistance(currentUser.lat, currentUser.lng, data.from.lat, data.from.lng);
-                if (dist <= currentUser.maxDist && data.from.gender !== currentUser.gender) {
-                    addMessage(data.content, 'received', data.from.name);
-                }
-            } else if (data.type === 'join') {
-                 addMessage(`系统: ${data.user.name} 已上线`, 'info');
-            }
-        }
-
-        // 在页面上显示消息
+        // 7. 在页面上显示消息
         function addMessage(content, type, senderName = null) {
             const messagesDiv = document.getElementById('messages');
             const messageElement = document.createElement('div');
@@ -323,3 +406,6 @@
     </script>
 </body>
 </html>
+
+
+
