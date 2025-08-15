@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P 异性距离匹配聊天 (真实环境)</title>
-    <style>
+    <title>异性距离匹配聊天</title>
+   <!--<style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -92,10 +92,12 @@
             font-weight: bold;
         }
     </style>
+-->
+    <link rel="stylesheet" href="index.css">
 </head>
-<body>
-    <div class="container">
-        <h1>P2P 异性距离匹配聊天 (真实环境)</h1>
+<body id="appbody">
+    <div class="container" id="imgbox">
+        <h1>异性距离匹配聊天</h1>
         <div id="setup">
             <input type="text" id="username" placeholder="请输入您的昵称">
             <br>
@@ -131,7 +133,7 @@
     <script>
         // --- 配置 ---
         // 请在此处替换为您的真实 WebSocket 服务器地址
-        const WEBSOCKET_SERVER_URL = 'http://www.websocket-test.com/'; // 示例: 'wss://echo.websocket.org' 用于测试，但无匹配逻辑
+        const WEBSOCKET_SERVER_URL = 'wss://your-websocket-server.com'; // 示例: 'wss://echo.websocket.org' 用于测试，但无匹配逻辑
 
         // --- 状态和数据 ---
         let currentUser = null;
