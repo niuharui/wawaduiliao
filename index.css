@@ -1,57 +1,49 @@
-
-        body {
+body {
             font-family: Arial, sans-serif;
-            width:100% ;
-           /*eight:100%;*/
-            margin: 100%;
-            padding: 10%;
-            margin-left: auto;
-            background-color: #006acc;
-            border-style:solid;
-           /*order-left-width: 50px;*/
-            border-color:brown;   
-            background-size:cover;
-            background-color:darkgreen;
-        } 
-        /*ppbody{
-            width:100%;
-            height:800px;
+            margin: 0;
+            padding: 20px;
+            background-image:url(https://youke1.picui.cn/s1/2025/08/16/689feb1718ef3.jpg);
+            background-attachment: scroll;
             border-style:solid;
             border-width:3px;
-            border-color:#0084ff;
-            background-size:cover;
-        }*/
-        #imgbox{
-            background-size:cover;
-            background-color:#ccc;
-        }       
+            border-color:brown
+        }
         .container {
-           /* background-size:cover;
-            background-color:darkgreen;*/
-            
             max-width: 70%;
             margin: auto;
-            height:600px;
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-           /*border-left-style: solid;*/
-            border-style:solid;
-            border-width:3px;
-            border-color: #333;
+            box-shadow: 5px 2px 10px rgba(0, 0, 0, 0.1);
+            opacity: 0.8;
         }
         h1 {
+            letter-spacing:3px;
+            text-shadow:1px 1px 1px #0084ff;
             text-align: center;
             color: #333;
         }
         #username{
             width:18%;
-            margin: auto;
-            height:22px;
-            border-radius: 5px;
-            border:1px solid #e9ecef
-
+            text-align:center;
+            height: 2%;
+            font-size:18px;
+            font-style:bold;
+            border-style:solid;
+            border-width:2px;
+            border-color: #333;
+            box-shadow: 5px 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        #maxDistance{
+            width:18%;
+            text-align:center;
+            height: 2%;
+            font-size:18px;
+            font-style:bold;
+            border-style:solid;
+            border-width:2px;
+            border-color: #333;
+            box-shadow: 5px 2px 10px rgba(0, 0, 0, 0.1);
         }
         #setup, #chat {
             text-align: center;
