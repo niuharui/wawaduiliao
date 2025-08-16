@@ -11,9 +11,9 @@
 如因公开分享导致的任何法律问题，用户需自行承担责任
 项目开发者不对用户的使用行为承担任何法律责任
 
-重要提示： 这是一个基础的部署指南，适用于测试和演示。在生产环境中，您需要考虑更多因素，如安全性（身份验证、授权、防止DDoS攻击）、性能优化、日志记录、监控、数据持久化、负载均衡等。
+#  重要提示： 这是一个基础的部署指南，适用于测试和演示。在生产环境中，您需要考虑更多因素，如安全性（身份验证、授权、防止DDoS攻击）、性能优化、日志记录、监控、数据持久化、负载均衡等。
 
-第一步：在阿里云购买和配置ECS服务器
+# 第一步：在阿里云购买和配置ECS服务器
 登录阿里云控制台: 访问 https://home.console.aliyun.com/ 并使用您的账号登录。
 购买ECS实例:
 在控制台首页或服务列表中找到“云服务器ECS”。
@@ -39,41 +39,29 @@ ICMP (用于ping测试，可选)
 获取公网IP地址:
 实例创建完成后，在ECS控制台的实例列表中找到您的实例。
 记下分配给它的“公网IP地址”。
-第二步：连接到ECS服务器并安装环境
+# 第二步：连接到ECS服务器并安装环境
 使用SSH连接: 使用终端（Mac/Linux）或PuTTY（Windows）通过SSH连接到您的ECS实例。
-bash
-深色版本
 ssh root@<YOUR_ECS_PUBLIC_IP>
-# 或者如果您使用密钥对
-# ssh -i /path/to/your/key.pem root@<YOUR_ECS_PUBLIC_IP>
+#或者如果您使用密钥对
+#ssh -i /path/to/your/key.pem root@<YOUR_ECS_PUBLIC_IP>
 (将 <YOUR_ECS_PUBLIC_IP> 替换为您的实际公网IP)
 更新系统包 (Ubuntu):
-bash
-深色版本
 apt update && apt upgrade -y
 安装Node.js和npm:
-bash
-深色版本
-# 安装 NodeSource 仓库以获取较新版本的 Node.js
+#安装 NodeSource 仓库以获取较新版本的 Node.js
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 apt-get install -y nodejs
-# 验证安装
+#验证安装
 node -v
 npm -v
-第三步：部署WebSocket服务器
+# 第三步：部署WebSocket服务器
 创建工作目录:
-bash
-深色版本
 mkdir /home/chat-app
 cd /home/chat-app
 初始化Node.js项目并安装依赖:
-bash
-深色版本
 npm init -y
 npm install ws
 创建WebSocket服务器代码 (server.js):
-javascript
-深色版本
 const WebSocket = require('ws');
 
 // --- 配置 ---
@@ -193,25 +181,19 @@ process.on('SIGINT', () => {
 });
 进入代码分屏
 运行服务器:
-bash
-深色版本
 node /home/chat-app/server.js
 您应该会看到 WebSocket服务器启动，监听端口 8080 的输出。保持此终端窗口打开。
-第四步：修改并部署前端代码
+# 第四步：修改并部署前端代码
 修改前端HTML代码中的WebSocket地址:
 将您之前生成的HTML代码保存为本地文件，例如 index.html。
 找到 const WEBSOCKET_SERVER_URL = 'wss://your-websocket-server.com'; 这一行。
 将其修改为指向您的阿里云ECS服务器的公网IP和端口：
-javascript
-深色版本
 const WEBSOCKET_SERVER_URL = 'ws://<YOUR_ECS_PUBLIC_IP>:8080';
 (将 <YOUR_ECS_PUBLIC_IP> 替换为您的实际公网IP)
 注意: 这里使用的是 ws:// (非加密)。如果您的页面通过HTTPS (https://) 加载，浏览器会阻止连接到 ws://。为了解决这个问题，您需要配置SSL证书并使用 wss://。这通常涉及使用Nginx等反向代理。为简化起见，我们先使用 ws://，这意味着您需要通过HTTP (http://) 访问您的HTML页面。
 上传前端文件到ECS (可选，也可以本地测试):
 如果您想直接从ECS服务器访问前端页面，可以将 index.html 上传到ECS。
 方法一：使用SCP命令 (本地终端):
-bash
-深色版本
 scp /path/to/your/local/index.html root@<YOUR_ECS_PUBLIC_IP>:/home/chat-app/
 方法二：在ECS上创建文件:
 在ECS上运行 nano /home/chat-app/index.html 或 vim /home/chat-app/index.html。
@@ -219,15 +201,11 @@ scp /path/to/your/local/index.html root@<YOUR_ECS_PUBLIC_IP>:/home/chat-app/
 （可选）在ECS上简单托管前端文件:
 您可以在ECS上快速启动一个简单的HTTP服务器来托管 index.html。
 安装 http-server:
-bash
-深色版本
 npm install -g http-server
 在 /home/chat-app 目录下运行:
-bash
-深色版本
 http-server -p 8000
 现在您可以通过 http://<YOUR_ECS_PUBLIC_IP>:8000 访问您的聊天页面。
-第五步：测试
+# 第五步：测试
 确保服务器运行: 确保您的Node.js WebSocket服务器 (server.js) 正在ECS上运行。
 访问前端页面:
 本地测试: 在您的本地计算机上，用浏览器打开您修改后的 index.html 文件（通过文件浏览器打开，URL是 file://...）。由于是 file:// 协议，可以连接到 ws://。
