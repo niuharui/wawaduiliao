@@ -107,7 +107,7 @@
                 <option value="female">女</option>
             </select>
             <br>
-            <input type="number" id="maxDistance" placeholder="最大匹配距离 (公里)" value="100">
+            <input type="number" id="maxDistance" placeholder="最大匹配距离 (公里)" value="请输入距离">
             <br>
             <button onclick="startChat()">开始聊天</button>
             <p><em>点击开始后，浏览器可能会请求获取您的地理位置。</em></p>
@@ -119,8 +119,8 @@
             </div>
             <div id="status">正在初始化...</div>
             <div id="messages"></div>
-            <div style="margin-top: 10px;">
-                <input type="text" id="messageInput" placeholder="输入消息..." onkeypress="if(event.key==='Enter')sendMessage()">
+            <div style="margin-top: 20px;">
+                <input id="messageInput" type="text" id="messageInput" placeholder="输入消息..." onkeypress="if(event.key==='Enter')sendMessage()">
                 <button onclick="sendMessage()">发送</button>
             </div>
             <div class="user-list">
@@ -402,7 +402,7 @@
 
         // 页面加载完成后，可以尝试自动填充昵称
         window.onload = function() {
-            const randomNames = ['旅行者', '探索者', '路人甲', '网友乙'];
+            const randomNames = ['旅行者', '探索者', '路人甲', '网友乙','苦力强','大魔王','小可爱','龅牙珍','小懒猪','小懒虫','小懒猫','小懒狗','小懒鱼','小懒蛇','小懒鸡','小懒鸭','小懒猪','小懒牛','小懒羊','小懒猪','小懒猪','小懒猪','小懒猪','小懒猪','小懒猪','小懒猪','小懒猪','小懒猪','小懒猪','小懒猪','小懒猪'];
             document.getElementById('username').value = randomNames[Math.floor(Math.random() * randomNames.length)];
         };
     </script>
